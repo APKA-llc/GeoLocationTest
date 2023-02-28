@@ -1,26 +1,80 @@
 import React, { useState, useEffect } from 'react';
 import {StyleSheet, View, Text, Button} from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import { BackgroundFetch, BackgroundTask } from 'react-native-background-actions';
+
+//import {auth, user} from "./firebaseConfig";
+
+const USER_ID = '1';
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 import { Platform, PermissionsAndroid } from 'react-native';
 
 async function requestPermissions() {
-  if (Platform.OS === 'ios') {
-    const auth = await Geolocation.requestAuthorization("whenInUse");
-    if(auth === "granted") {
+  if (Platform.OS === "ios") {
+    const auth = await Geolocation.requestAuthorization("always");
+    if (auth === "granted") {
       // do something if granted...
     }
   }
 
-  if (Platform.OS === 'android') {
+  if (Platform.OS === "android") {
     const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      PermissionsAndroid.PERMISSIONS.ACCESS_BACKGROUND_LOCATION,
     );
     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
       // do something if granted...
     }
   }
 }
+
+BackgroundTask.define(async () => {
+  console.log('Running background task...');
+  await handleSendLocation();
+  BackgroundTask.finish();
+});
+
+const options = {
+  taskName: 'Update Location',
+  taskTitle: 'Updating Location...',
+  taskDesc: 'Updating your location in Firebase Realtime Database',
+  taskIcon: {
+    name: 'ic_launcher',
+    type: 'mipmap',
+  },
+  color: '#ff00ff',
+  parameters: {
+    location: null,
+  },
+};
+
+const registerTask = async () => {
+  await BackgroundTask.register({
+    taskFunction,
+    options,
+  });
+};
+
+const startTask = async () => {
+  const hasRegistered = await BackgroundTask.isTaskRegistered({
+    taskName: options.taskName,
+  });
+
+  if (hasRegistered) {
+    await BackgroundTask.start({
+      taskName: options.taskName,
+      taskTitle: options.taskTitle,
+      taskDesc: options.taskDesc,
+      parameters: {
+        location,
+      },
+    });
+  }
+};
+
 
 
 const App = () => {
@@ -37,9 +91,30 @@ const App = () => {
   };
 
   useEffect(() => {
-    Geolocation.getCurrentPosition(
-      (location) => {
-        const { latitude, longitude, altitude } = location.coords;
+    registerTask();
+    startTask();
+
+    BackgroundTask.schedule({
+      taskName: 'Send Location',
+      taskTitle: 'Updating Location...',
+      taskDesc: 'This task updates the user location every 10 seconds',
+      taskIcon: {
+        name: 'ic_launcher',
+        type: 'mipmap',
+      },
+      color: '#ffffff',
+      parameters: {
+        userID: USER_ID,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      },
+      period: 10000, // 10 seconds
+      actions: '["Stop"]',
+    });
+
+    Geolocation.watchPosition(
+      position => {
+        const { latitude, longitude, altitude } = position.coords;
         const distance = calculateDistance(
           latitude,
           longitude,
@@ -48,9 +123,13 @@ const App = () => {
         );
         setPosition({ latitude, longitude, altitude, distance });
       },
-      (error) => console.log(error),
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+      error => console.log(error),
+      { enableHighAccuracy: true, distanceFilter: 50 }
     );
+
+    return () => {
+      Geolocation.clearWatch();
+    };
   }, []);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -72,9 +151,23 @@ const App = () => {
     return deg * (Math.PI / 180);
   };
 
-  const handleGetLocation = async () => {
-    await requestPermissions();
+  const handleSendLocation = async () => {
+    try {
+      const updateLocation = firebase.functions().httpsCallable('updateLocation');
+      const response = await updateLocation({
+        userID: USER_ID, // Replace with the user's ID
+        latitude: position.latitude,
+        longitude: position.longitude,
+      });
+      console.log(response.data); // Log the response from the Cloud Function
+    } catch (error) {
+      console.error(error);
+    }
   };
+  
+  const handleGetLocation = async () => {
+    await requestPermissions
+  }
   
   return (
     <View style={styles.container}>
@@ -89,7 +182,7 @@ const App = () => {
       <Text>Distance from Target Location: {position.distance}</Text>
       <View
         style={{marginTop: 10, padding: 10, borderRadius: 10, width: '40%'}}>
-        <Button title="Send Location" />
+        <Button title="Send Location" onPress={handleSendLocation}/>
       </View>
     </View>
   );
