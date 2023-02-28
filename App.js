@@ -32,8 +32,8 @@ const App = () => {
   });
 
   const targetLocation = {
-    latitude: 37.785834,
-    longitude: -122.406417,
+    latitude: 32.739061,
+    longitude: -96.824530,
   };
 
   useEffect(() => {
@@ -86,6 +86,7 @@ const App = () => {
       <Text>Latitude: {position.latitude}</Text>
       <Text>Longitude: {position.longitude}</Text>
       <Text>Altitude: {position.altitude}</Text>
+      <Text>Distance from Target Location: {position.distance}</Text>
       <View
         style={{marginTop: 10, padding: 10, borderRadius: 10, width: '40%'}}>
         <Button title="Send Location" />
