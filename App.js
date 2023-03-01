@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {StyleSheet, View, Text, Button} from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import BackgroundFetch from 'react-native-background-fetch';
 import { Platform, PermissionsAndroid } from 'react-native';
+import { initializeApp } from 'firebase/app';
+import { getDatabase, ref, push } from 'firebase/database';
 
 async function requestPermissions() {
   if (Platform.OS === 'ios') {
@@ -21,6 +24,20 @@ async function requestPermissions() {
   }
 }
 
+const firebaseConfig = {
+  apiKey: "AIzaSyBIxyWXOXaYCrFYjZ6NxSYFuqSPxmwwDLM",
+  authDomain: "testbump-837e9.firebaseapp.com",
+  projectId: "testbump-837e9",
+  storageBucket: "testbump-837e9.appspot.com",
+  messagingSenderId: "354846707560",
+  appId: "1:354846707560:web:dfb063285f04f70462d0dd",
+  measurementId: "G-WM22EQPG7C"
+};
+
+const app = initializeApp(firebaseConfig); // initialize the Firebase app
+
+const db = getDatabase(app); // get the Firebase database instance
+
 
 const App = () => {
   const [position, setPosition] = useState({
@@ -34,6 +51,14 @@ const App = () => {
     latitude: 32.739061,
     longitude: -96.824530,
   };
+// do this every 20 seconds
+  setTimeout(() => {
+    const locationsRef = ref(db, 'locations');
+    push(locationsRef, { latitude: 0, longitude: 0})
+      .then(() => console.log('Test data written successfully'))
+      .catch((error) => console.log('Error writing test data:', error));
+
+  }, 2000);
 
   useEffect(() => {
     Geolocation.getCurrentPosition(
@@ -48,10 +73,9 @@ const App = () => {
         setPosition({ latitude, longitude, altitude, distance });
       },
       (error) => console.log(error),
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000 }
+      { enableHighAccuracy: true, timeout: 1000, maximumAge: 1000 }
     );
   }, []);
-
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -74,6 +98,12 @@ const App = () => {
   const handleGetLocation = async () => {
     await requestPermissions();
   };
+
+
+  //background fetch of location
+
+
+
   
   return (
     <View style={styles.container}>

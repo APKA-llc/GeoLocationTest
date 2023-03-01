@@ -3,6 +3,9 @@
 #import <React/RCTBridge.h>
 #import <React/RCTBundleURLProvider.h>
 #import <React/RCTRootView.h>
+
+#import <TSBackgroundFetch/TSBackgroundFetch.h>
+
 #import <React/RCTLinkingManager.h>
 #import <React/RCTConvert.h>
 
@@ -15,6 +18,9 @@
 #import <React/RCTSurfacePresenter.h>
 #import <React/RCTSurfacePresenterBridgeAdapter.h>
 #import <ReactCommon/RCTTurboModuleManager.h>
+
+#import <RNBackground>
+
 
 #import <react/config/ReactNativeConfig.h>
 
@@ -35,7 +41,10 @@ static NSString *const kRNConcurrentRoot = @"concurrentRoot";
 {
   RCTAppSetupPrepareApp(application);
 
+
+
   RCTBridge *bridge = [self.reactDelegate createBridgeWithDelegate:self launchOptions:launchOptions];
+
 
 #if RCT_NEW_ARCH_ENABLED
   _contextContainer = std::make_shared<facebook::react::ContextContainer const>();
@@ -56,6 +65,8 @@ static NSString *const kRNConcurrentRoot = @"concurrentRoot";
   [self.window makeKeyAndVisible];
 
   [super application:application didFinishLaunchingWithOptions:launchOptions];
+  
+  [[TSBackgroundFetch sharedInstance] didFinishLaunching];
 
   return YES;
 }
